@@ -26,13 +26,13 @@ bool isValidInput(int argc, char *argv[]) {
     if (atoi(argv[i]) <= 0) {
       switch (i) {
         case 1:
-          printf("x is not a positive integer.");
+          printf("x is not a positive integer.\n");
           break;
         case 2:
-          printf("y is not a positive integer.");
+          printf("y is not a positive integer.\n");
           break;
         case 3:
-          printf("interval is not a positive integer.");
+          printf("interval is not a positive integer.\n");
           break;
       }
       isValid = false;

@@ -1,3 +1,7 @@
+// 학번: 32184893
+// 학과: 모바일시스템공학과
+// 이름: 한현민
+
 #include "defines.h"
 #include "input_data_handler.h"
 #include "input_validate.h"
@@ -22,12 +26,11 @@ int main(int argc, char *argv[]) {
   // > 0 means parent process, == 0 means child process, and < 0 means exception
   if (pid > 0) {
     wait(&status);  // wait until the child process is terminated
-    int exitCode = WEXITSTATUS(
-        status);  // after the child process is terminated, pid value is updated.
-    printf("%d\n", exitCode);  // debug
+    int exitCode = WEXITSTATUS(status);  // after the child process is
+                                         // terminated, pid value is updated.
 
+    printf("Parent says that it is ");
     switch (exitCode) {
-      printf("Parent says that it is ");
       case 0:
         printf("less than 1000.\n");
         break;
