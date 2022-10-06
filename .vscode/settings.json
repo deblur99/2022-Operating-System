@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.html": "html",
+        "input_validate.h": "c",
+        "defines.h": "c",
+        "wait.h": "c"
+    }
+}
