@@ -1,16 +1,15 @@
 CC = gcc
+TARGET = main.out
+OBJS = main.o input_data_handler.o input_validate.o
+CFLAGS = -Wall -g
+LDFLAGS = -lc
 
-main.out : main.o input_data_handler.o input_validate.o
-	gcc -o main.out main.c input_data_handler.c input_validate.c
+all: $(TARGET)
+$(TARGET): $(OBJS)
+	$(CC) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
-main.o : main.c
-	gcc -c main.c
-
-input_data_handler.o : input_data_handler.c
-	gcc -c input_data_handler.c
-
-input_validate.o : input_validate.c
-	gcc -c input_validate.c
+.c.o:
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean :
-	rm *.out *.o
+	rm -f $(TARGET) $(OBJS)
