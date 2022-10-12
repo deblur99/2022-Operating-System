@@ -4,8 +4,8 @@
 
 #include "input_validate.h"
 
-void printInputCondition() {
-  printf("[usage] ./sum_with_process x y interval\n");
+void printInputCondition(char *filename) {
+  printf("[usage] %s x y interval\n", filename);
   printf("[condition] x, y, and interval are positive integers.\n");
 }
 
@@ -14,14 +14,14 @@ bool isValidInput(int argc, char *argv[]) {
 
   // check whether the number of input data is 4 or not
   if (argc != 4) {
-    printInputCondition();
+    printInputCondition(argv[0]);
     return false;
   }
 
   // check type of input data. they should be positive integers.
   for (int i = 1; i < argc; i++) {
     if (!atoi(argv[i])) {
-      printInputCondition();
+      printInputCondition(argv[0]);
       return false;
     }
   }
