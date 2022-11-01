@@ -17,6 +17,9 @@
 // Maximum length of each filename
 #define DIR_LENGTH 256
 
+// File handling block size
+#define FILE_HANDLE_BLOCK_SIZE 16
+
 // =========== handles file directory ===========
 // For counting file count to be saved in directory string array
 static int pdfFileCount = 0;
@@ -73,7 +76,31 @@ int main(int argc, char *argv[]) {
     printf("%s\n", jpgList[i]);
   }
 
-  // read a single jpg file by 16 bytes
+  // open a single jpg file
+  char *fileDir = (char *)malloc(sizeof(char) * BUF_SIZE);
+  strcpy(fileDir, "./target/");
+  strcat(fileDir, jpgList[0]);
+  FILE *fp = fopen(fileDir, "rb");
+
+  // read browsed jpg file by 16 bytes
+  char *readData = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+
+  int readDataSize = fread(readData, 1, FILE_HANDLE_BLOCK_SIZE, readData);
+
+  // check readData size is 16 or not.
+  // if the size is less than 16, then give it zero padding.
+  if (readDataSize == 16) {
+    printf("%s\n", readData);
+  } else if (readDataSize >= 0) {
+    for (int i = 0; i < 16 - strlen(readData); i++) {
+      strcat(readData, "0");
+    }
+    printf("%s\n", readData);
+  } else {
+    perror("File read failure");
+  }
+
+  free(fileDir);
 
   return 0;
 }
