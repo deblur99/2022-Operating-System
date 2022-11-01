@@ -1,8 +1,8 @@
 {
     "files.associations": {
         "*.html": "html",
+        "stdio.h": "c",
         "input_validate.h": "c",
-        "defines.h": "c",
-        "wait.h": "c"
+        "__threading_support": "c"
     }
 }
