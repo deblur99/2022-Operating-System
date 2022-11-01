@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
   }
 
   readFileList();  // read all files in target directory and save their
-                   // name into "directory" string array
+                   // name into each string array "pdfList" and "jpgList"
+                   // depending on its filetype
 
   // debug
   printf("pdfs: %d, jpgs: %d\n", pdfFileCount, jpgFileCount);
