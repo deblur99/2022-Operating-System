@@ -1,8 +1,8 @@
 CC = gcc
-TARGET = main.out
-OBJS = main.o input_data_handler.o input_validate.o
+TARGET = dkuware
+OBJS = dkuware.o utils.o
 CFLAGS = -Wall -g
-LDFLAGS = -lc
+LDFLAGS = -lc -lpthread -lssl -lcrypto
 
 all: $(TARGET)
 $(TARGET): $(OBJS)
