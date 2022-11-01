@@ -44,6 +44,20 @@ void readFileList();
 static __thread int processed_pdf_count = 0;
 static __thread int processed_jpg_count = 0;
 
+static char *rand_string(char *str, size_t size) {
+  const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  if (size) {
+    --size;
+    for (size_t n = 0; n < size; n++) {
+      int key = rand() % (int)(sizeof(charset) - 1);
+      str[n] = charset[key];
+    }
+    str[size] = '\0';
+  }
+  printf("%s\n", str);  // debug
+  return str;
+}
+
 void *encryption_pdfs(void *param);
 
 void *encryption_jpgs(void *param);
@@ -56,6 +70,9 @@ int main(int argc, char *argv[]) {
   if (!inputValidate(argc, argv)) {
     return -1;
   }
+
+  char *fileHandleMode = argv[1];
+  char *password = argv[2];
 
   readFileList();  // read all files in target directory and save their
                    // name into each string array "pdfList" and "jpgList"
@@ -76,31 +93,35 @@ int main(int argc, char *argv[]) {
     printf("%s\n", jpgList[i]);
   }
 
-  // open a single jpg file
-  char *fileDir = (char *)malloc(sizeof(char) * BUF_SIZE);
-  strcpy(fileDir, "./target/");
-  strcat(fileDir, jpgList[0]);
-  FILE *fp = fopen(fileDir, "rb");
+  // making threads and run them
+  pthread_t pdfHandleThread;
+  pthread_attr_t pdfHandleThreadStatus;
+  pthread_attr_init(&pdfHandleThreadStatus);
 
-  // read browsed jpg file by 16 bytes
-  char *readData = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+  pthread_t jpgHandleThread;
+  pthread_attr_t jpgHandleThreadStatus;
+  pthread_attr_init(&jpgHandleThreadStatus);
 
-  int readDataSize = fread(readData, 1, FILE_HANDLE_BLOCK_SIZE, readData);
+  if (strcmp(fileHandleMode, "attack")) {
+    pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, encryption_pdfs,
+                   NULL);
+    pthread_join(pdfHandleThread, NULL);
 
-  // check readData size is 16 or not.
-  // if the size is less than 16, then give it zero padding.
-  if (readDataSize == 16) {
-    printf("%s\n", readData);
-  } else if (readDataSize >= 0) {
-    for (int i = 0; i < 16 - strlen(readData); i++) {
-      strcat(readData, "0");
-    }
-    printf("%s\n", readData);
-  } else {
-    perror("File read failure");
+    pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, encryption_jpgs,
+                   NULL);
+    pthread_join(jpgHandleThread, NULL);
+
+  } else if (strcmp(fileHandleMode, "restore")) {
+    pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, decryption_pdfs,
+                   NULL);
+    pthread_join(pdfHandleThread, NULL);
+
+    pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, decryption_jpgs,
+                   NULL);
+    pthread_join(jpgHandleThread, NULL);
   }
 
-  free(fileDir);
+  printf("all processes are completed.\n");  // debug
 
   return 0;
 }
@@ -179,10 +200,165 @@ void readFileList() {
   pclose(pipe);
 }
 
-void *encryption_pdfs(void *param) { return NULL; }
+void *encryption_pdfs(void *param) {
+  for (int i = 0; i < pdfFileCount; i++) {
+    // open a single jpg file
+    char *fileDir = (char *)malloc(sizeof(char) * BUF_SIZE);
+    strcpy(fileDir, "./target/");
+    strcat(fileDir, pdfList[i]);
+    FILE *fp = fopen(fileDir, "rb");
 
-void *encryption_jpgs(void *param) { return NULL; }
+    // read browsed jpg file by 16 bytes
+    char *plainText = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
 
-void *decryption_pdfs(void *param) { return NULL; }
+    // get size value
+    int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    int plainTextStringSize = strlen(plainText);
 
-void *decryption_jpgs(void *param) { return NULL; }
+    // check plainText size is 16 or not.
+    // if the size is less than 16, then give it zero padding.
+    if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
+      printf("%s\n", plainText);  // debug
+    } else if (plainTextStringSize >= 0) {
+      // give plainText zero padding
+      for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
+        strcat(plainText, "0");
+      }
+      printf("%s\n", plainText);  // debug
+    } else {
+      perror("File read failure");  // exception
+    }
+
+    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
+
+    // do XOR calculation on plainText with randomly generated mask
+    char *mask = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+    mask = rand_string(mask, FILE_HANDLE_BLOCK_SIZE);
+
+    // 11/2 (수) 할 일
+    // 1. 무작위 생성한 16바이트짜리 mask 생성 후 XOR 연산하여 cipherText
+    // 생성하여 덮어쓰기
+    // 2. mask는 AES-128 암호화하여 파일의 맨 뒷 부분에 붙이기
+    // (파일 포인터 새로 만들고, 이때 모드는 wba로 하여 fwrite 연산하기)
+
+    // 3. 복호화 - 맨 앞부분, 뒷부분에서 각각 cipherText, 암호화된 mask 읽어오기
+    // 4. mask는 password 값과 같이 AES-128 복호화하여 평문 mask 얻기
+    // 5. 평문 mask를 cipherText와 XOR 연산하여 plainText 얻고, 이를 맨 앞
+    // 16바이트에 덮어쓰기
+
+    free(plainText);
+    fclose(fp);
+    free(fileDir);
+  }
+}
+
+void *encryption_jpgs(void *param) {
+  for (int i = 0; i < jpgFileCount; i++) {
+    // open a single jpg file
+    char *fileDir = (char *)malloc(sizeof(char) * BUF_SIZE);
+    strcpy(fileDir, "./target/");
+    strcat(fileDir, jpgList[i]);
+    FILE *fp = fopen(fileDir, "rb");
+
+    // read browsed jpg file by 16 bytes
+    char *plainText = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+
+    // get size value
+    int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    int plainTextStringSize = strlen(plainText);
+
+    // check plainText size is 16 or not.
+    // if the size is less than 16, then give it zero padding.
+    if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
+      printf("%s\n", plainText);  // debug
+    } else if (plainTextStringSize >= 0) {
+      // give plainText zero padding
+      for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
+        strcat(plainText, "0");
+      }
+      printf("%s\n", plainText);  // debug
+    } else {
+      perror("File read failure");  // exception
+    }
+
+    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
+
+    free(plainText);
+    fclose(fp);
+    free(fileDir);
+  }
+}
+
+void *decryption_pdfs(void *param) {
+  for (int i = 0; i < pdfFileCount; i++) {
+    // open a single jpg file
+    char *fileDir = (char *)malloc(sizeof(char) * BUF_SIZE);
+    strcpy(fileDir, "./target/");
+    strcat(fileDir, pdfList[i]);
+    FILE *fp = fopen(fileDir, "rb");
+
+    // read browsed jpg file by 16 bytes
+    char *plainText = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+
+    // get size value
+    int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    int plainTextStringSize = strlen(plainText);
+
+    // check plainText size is 16 or not.
+    // if the size is less than 16, then give it zero padding.
+    if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
+      printf("%s\n", plainText);  // debug
+    } else if (plainTextStringSize >= 0) {
+      // give plainText zero padding
+      for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
+        strcat(plainText, "0");
+      }
+      printf("%s\n", plainText);  // debug
+    } else {
+      perror("File read failure");  // exception
+    }
+
+    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
+
+    free(plainText);
+    fclose(fp);
+    free(fileDir);
+  }
+}
+
+void *decryption_jpgs(void *param) {
+  for (int i = 0; i < jpgFileCount; i++) {
+    // open a single jpg file
+    char *fileDir = (char *)malloc(sizeof(char) * BUF_SIZE);
+    strcpy(fileDir, "./target/");
+    strcat(fileDir, jpgList[i]);
+    FILE *fp = fopen(fileDir, "rb");
+
+    // read browsed jpg file by 16 bytes
+    char *plainText = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+
+    // get size value
+    int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    int plainTextStringSize = strlen(plainText);
+
+    // check plainText size is 16 or not.
+    // if the size is less than 16, then give it zero padding.
+    if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
+      printf("%s\n", plainText);  // debug
+    } else if (plainTextStringSize >= 0) {
+      // give plainText zero padding
+      for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
+        strcat(plainText, "0");
+      }
+      printf("%s\n", plainText);  // debug
+    } else {
+      perror("File read failure");  // exception
+    }
+
+    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
+
+    free(plainText);
+    fclose(fp);
+    free(fileDir);
+  }
+}
