@@ -5,3 +5,10 @@
 // ransom note 출력하는 파일
 
 #pragma once
+
+#include <stdio.h>
+#include <string.h>
+
+void printAsciiArtOnEncryption();
+
+void printAsciiArtOnDecryption();

