@@ -6,3 +6,9 @@
 #pragma once
 
 #include <openssl/aes.h>
+
+#define BLOCK_SIZE 16
+
+char *aes_128_encryption(char *plainText);
+
+char *aes_128_decryption(char *cipherText);

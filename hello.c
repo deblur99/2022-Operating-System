@@ -1,15 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[]) {
-  printf("argc : %d\n", argc);
-  if (argc <= 1) {
-    printf("Default\n");    
-  } else {
-    for (int i = 0; i < argc; i++) {
-      printf("%s ", argv[i]);
-    }
-    printf("\n");
-  }
+  unsigned char c = rand();
+
+  printf("%c %d\n", c, (int)c);
 
   return 0;
 }

