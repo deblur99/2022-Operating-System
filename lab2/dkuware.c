@@ -16,7 +16,10 @@
 // 1. 복호화 부분
 // 1-1. plainText 맨 앞 16바이트에 쓰기
 // 1-2. 맨 뒤에 있는 암호화된 mask 16바이트 삭제하기
-// 2.
+// 2. 터미널 출력 부분
+// 2-1. [attack], [restore] 로그 출력하기
+// 2-2. 출력 노트 같이 출력하기
+// 3. 마무리 : debug 코드 삭제, Makefile 작성, 프로젝트 폴더 압축 후 제출
 
 #include <pthread.h>
 #include <stdio.h>
