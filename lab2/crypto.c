@@ -4,21 +4,18 @@
 
 #include "crypto.h"
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-char *aes_128_encryption(char *plainText) {
+unsigned char *aes_128_encryption(unsigned char *plainText) {
   AES_KEY key;
   unsigned char initKey[BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
                                        0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
                                        0x0c, 0x0d, 0x0e, 0x0f};
 
-  unsigned char cipherText[BLOCK_SIZE] = {
-      0x00,
-  };
-
-  printf("before calling encryption: %s / length: %ld / size: %ld\n", plainText,
-         strlen(plainText), sizeof(plainText));  // debug
+  unsigned char *cipherText =
+      (unsigned char *)malloc(sizeof(unsigned char) * BLOCK_SIZE);
+  memset(cipherText, 0, BLOCK_SIZE);
 
   // AES 암호화 키 스케줄링
   if (AES_set_encrypt_key(initKey, sizeof(initKey) * 8, &key) < 0) {
@@ -27,21 +24,20 @@ char *aes_128_encryption(char *plainText) {
   // AES 암호화 : 평문, 암호문, 비밀키
   AES_encrypt(plainText, cipherText, &key);
 
-  printf("after calling encryption: %s / length: %ld / size: %ld\n", cipherText,
-         strlen(cipherText), sizeof(cipherText));  // debug
+  free(plainText);
 
   return cipherText;
 }
 
-char *aes_128_decryption(char *cipherText) {
+unsigned char *aes_128_decryption(unsigned char *cipherText) {
   AES_KEY key;
   unsigned char initKey[BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
                                        0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
                                        0x0c, 0x0d, 0x0e, 0x0f};
 
-  unsigned char plainText[BLOCK_SIZE] = {
-      0x00,
-  };
+  unsigned char *plainText =
+      (unsigned char *)malloc(sizeof(unsigned char) * BLOCK_SIZE);
+  memset(plainText, 0, BLOCK_SIZE);
 
   // AES 복호화 키 스케줄링
   if (AES_set_decrypt_key(initKey, sizeof(initKey) * 8, &key) < 0) {
@@ -49,6 +45,12 @@ char *aes_128_decryption(char *cipherText) {
   };
   // AES 복호화 : 암호문, 평문, 키
   AES_decrypt(cipherText, plainText, &key);
+
+  // 평문 부분 추출
+  unsigned char buf[2] = {cipherText[0], '\0'};
+  plainText = (unsigned char *)strtok(plainText, buf);
+
+  free(cipherText);
 
   return plainText;
 }
