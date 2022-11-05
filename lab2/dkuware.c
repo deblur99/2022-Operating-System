@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
   char *fileHandleMode = argv[1];
 
-  // save inputted password to key array as aes-key
+  // save inputted password to key array
   unsigned char key[KEY_SIZE] = {
       0,
   };
