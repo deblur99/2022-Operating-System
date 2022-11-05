@@ -218,20 +218,22 @@ void *encryption_pdfs(void *key) {
     memset(plainText, 0, FILE_HANDLE_BLOCK_SIZE);
 
     // get size value
-    int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
-    int plainTextStringSize = strlen(plainText);
+    fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    // int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    // int plainTextStringSize = strlen(plainText);
 
-    // check plainText size is 16 or not.
-    // if the size is less than 16, then give it zero padding.
-    if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
-    } else if (plainTextStringSize >= 0) {
-      // give plainText zero padding
-      for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
-        strcat(plainText, "0");
-      }
-    } else {
-      perror("File read failure");  // exception
-    }
+    // // check plainText size is 16 or not.
+    // // if the size is less than 16, then give it zero padding.
+    // if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
+    // } else if (plainTextStringSize >= 0) {
+    //   // give plainText zero padding
+    //   for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++)
+    //   {
+    //     strcat(plainText, "0");
+    //   }
+    // } else {
+    //   perror("File read failure");  // exception
+    // }
 
     // generate mask randomly
     unsigned char *mask =
@@ -299,20 +301,22 @@ void *encryption_jpgs(void *key) {
     memset(plainText, 0, FILE_HANDLE_BLOCK_SIZE);
 
     // get size value
-    int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
-    int plainTextStringSize = strlen(plainText);
+    fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    // int plainTextSize = fread(plainText, 1, FILE_HANDLE_BLOCK_SIZE, fp);
+    // int plainTextStringSize = strlen(plainText);
 
-    // check plainText size is 16 or not.
-    // if the size is less than 16, then give it zero padding.
-    if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
-    } else if (plainTextStringSize >= 0) {
-      // give plainText zero padding
-      for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++) {
-        strcat(plainText, "0");
-      }
-    } else {
-      perror("File read failure");  // exception
-    }
+    // // check plainText size is 16 or not.
+    // // if the size is less than 16, then give it zero padding.
+    // if (plainTextStringSize == FILE_HANDLE_BLOCK_SIZE) {
+    // } else if (plainTextStringSize >= 0) {
+    //   // give plainText zero padding
+    //   for (int i = 0; i < FILE_HANDLE_BLOCK_SIZE - plainTextStringSize; i++)
+    //   {
+    //     strcat(plainText, "0");
+    //   }
+    // } else {
+    //   perror("File read failure");  // exception
+    // }
 
     // generate mask randomly
     unsigned char *mask =
