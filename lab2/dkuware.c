@@ -18,6 +18,25 @@
 // - ./target 디렉토리 파일 복호화: 터미널을 압축 해제한 디렉토리에 위치해 놓은
 // 상태에서 ./dkuware restore password 입력
 
+// 내가 놓친 부분들
+// 1. 실행인자 중 "password" 에 대하여 (해결)
+// - 기존에는 단순 비밀번호로 간주하고 입력 단에서 검증하고 넘어갔는데 이렇게
+// 하면 안 됨
+// - password에서 16바이트 추출 후 unsigned char 타입의 문자열로 저장
+//  - 여기서, 입력받은 password가 16바이트보다 작다면 zero padding
+// -> 즉, 같은 동작을 두 쓰레드가 하므로, unsigned char는 배열 형태의 전역변수로
+// 저장하거나, 동적할당으로 저장하면 된다. 나머지는 똑같음
+
+// 2. 복호화 작업
+// 대충 암호화 시 넣은 키와 똑같은 키를 넣으면 되는듯
+
+// heap corruption 문제
+// 증상: 빌드 후에 첫 실행 시, 확률적으로 heap corruption 발생
+// 원인 추측: 두 쓰레드가 같은 heap 영역을 동시에 참조하여 발생하는 오류. why?
+// heap 영역은 두 쓰레드가 공유하는 영역이므로 해결책: 쓰레드 동기화 (mutex,
+// semaphore 등등) -> but 수업에서 아직 나가지 않은 부분 다른 해결책: heap이
+// 쓰이는 변수를 data segment에 할당하도록 변경
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +52,9 @@
 #define MAX_FILE_AMOUNT 128
 // Maximum length of each filename
 #define DIR_LENGTH 256
+
+// Key size
+#define KEY_SIZE 16
 
 // File handling block size
 #define FILE_HANDLE_BLOCK_SIZE 16
@@ -75,7 +97,20 @@ int main(int argc, char *argv[]) {
   }
 
   char *fileHandleMode = argv[1];
-  char *password = argv[2];
+
+  // save inputted password to key array as aes-key
+  static unsigned char key[KEY_SIZE] = {
+      0,
+  };
+  if (strlen(argv[2]) < KEY_SIZE) {
+    for (int i = 0; i < strlen(argv[2]); i++) {
+      key[i] = (unsigned char)(argv[2][i]);
+    }
+  } else {
+    for (int i = 0; i < KEY_SIZE; i++) {
+      key[i] = (unsigned char)(argv[2][i]);
+    }
+  }
 
   readFileList();  // read all files in target directory and save their
                    // name into each string array "pdfList" and "jpgList"
@@ -94,22 +129,22 @@ int main(int argc, char *argv[]) {
 
   if (strcmp(fileHandleMode, "attack") == 0) {
     f = encryption_pdfs;
-    pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, f, NULL);
+    pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, f, key);
     pthread_join(pdfHandleThread, NULL);
 
     f = encryption_jpgs;
-    pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, f, NULL);
+    pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, f, key);
     pthread_join(jpgHandleThread, NULL);
 
     printAsciiArtOnEncryption();
 
   } else if (strcmp(fileHandleMode, "restore") == 0) {
     f = decryption_pdfs;
-    pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, f, NULL);
+    pthread_create(&pdfHandleThread, &pdfHandleThreadStatus, f, key);
     pthread_join(pdfHandleThread, NULL);
 
     f = decryption_jpgs;
-    pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, f, NULL);
+    pthread_create(&jpgHandleThread, &jpgHandleThreadStatus, f, key);
     pthread_join(jpgHandleThread, NULL);
 
     printAsciiArtOnDecryption();
@@ -130,11 +165,6 @@ int inputValidate(int argc, char *argv[]) {
   if (strcmp(argv[1], "attack") && strcmp(argv[1], "restore")) {
     printf("Error: Invalid Input\n");
     printf("Input example: <./filename> <attack/restore> <password>\n");
-    return 0;
-  }
-
-  if (strcmp(argv[2], "password")) {
-    printf("Error: Inputted password is not correct.\n");
     return 0;
   }
 

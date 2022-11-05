@@ -3,6 +3,7 @@
         "*.html": "html",
         "stdio.h": "c",
         "input_validate.h": "c",
-        "__threading_support": "c"
+        "__threading_support": "c",
+        "stdlib.h": "c"
     }
 }
