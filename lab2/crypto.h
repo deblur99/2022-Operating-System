@@ -9,6 +9,8 @@
 
 #define BLOCK_SIZE 16
 
-unsigned char *aes_128_encryption(unsigned char *plainText);
+unsigned char *aes_128_encryption(unsigned char *plainText,
+                                  unsigned char *initKey);
 
-unsigned char *aes_128_decryption(unsigned char *cipherText);
+unsigned char *aes_128_decryption(unsigned char *cipherText,
+                                  unsigned char *initKey);

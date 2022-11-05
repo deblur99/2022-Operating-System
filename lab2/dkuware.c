@@ -83,13 +83,13 @@ void readFileList();
 static __thread int processed_pdf_count = 0;
 static __thread int processed_jpg_count = 0;
 
-void *encryption_pdfs(void *param);
+void *encryption_pdfs(void *key);
 
-void *encryption_jpgs(void *param);
+void *encryption_jpgs(void *key);
 
-void *decryption_pdfs(void *param);
+void *decryption_pdfs(void *key);
 
-void *decryption_jpgs(void *param);
+void *decryption_jpgs(void *key);
 
 int main(int argc, char *argv[]) {
   if (!inputValidate(argc, argv)) {
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
   char *fileHandleMode = argv[1];
 
   // save inputted password to key array as aes-key
-  static unsigned char key[KEY_SIZE] = {
+  unsigned char key[KEY_SIZE] = {
       0,
   };
   if (strlen(argv[2]) < KEY_SIZE) {
@@ -224,7 +224,7 @@ void readFileList() {
   pclose(pipe);
 }
 
-void *encryption_pdfs(void *param) {
+void *encryption_pdfs(void *key) {
   for (int i = 0; i < pdfFileCount; i++) {
     // open a single jpg file
     unsigned char *fileDir =
@@ -284,7 +284,7 @@ void *encryption_pdfs(void *param) {
     fclose(overwrite_fp);
 
     // mask를 AES-128 알고리즘으로 암호화
-    mask = aes_128_encryption(mask);
+    mask = aes_128_encryption(mask, key);
 
     // overwrite encrypted mask on the tail of target file
     overwrite_fp = fopen(fileDir, "ab");
@@ -305,7 +305,7 @@ void *encryption_pdfs(void *param) {
   return NULL;
 }
 
-void *encryption_jpgs(void *param) {
+void *encryption_jpgs(void *key) {
   for (int i = 0; i < jpgFileCount; i++) {
     // open a single jpg file
     unsigned char *fileDir =
@@ -365,7 +365,7 @@ void *encryption_jpgs(void *param) {
     fclose(overwrite_fp);
 
     // mask를 AES-128 알고리즘으로 암호화
-    mask = aes_128_encryption(mask);
+    mask = aes_128_encryption(mask, key);
 
     // overwrite encrypted mask on the tail of target file
     overwrite_fp = fopen(fileDir, "ab");
@@ -386,7 +386,7 @@ void *encryption_jpgs(void *param) {
   return NULL;
 }
 
-void *decryption_pdfs(void *param) {
+void *decryption_pdfs(void *key) {
   for (int i = 0; i < pdfFileCount; i++) {
     // open a single jpg file
     unsigned char *fileDir =
@@ -417,7 +417,7 @@ void *decryption_pdfs(void *param) {
     int maskSize = fread(mask, 1, FILE_HANDLE_BLOCK_SIZE, mask_fp);
     int maskTextStringSize = strlen(mask);
 
-    mask = aes_128_decryption(mask);
+    mask = aes_128_decryption(mask, key);
 
     // do XOR calculation on plainText with randomly generated mask
     unsigned char plainText[FILE_HANDLE_BLOCK_SIZE] = {
@@ -456,7 +456,7 @@ void *decryption_pdfs(void *param) {
   return NULL;
 }
 
-void *decryption_jpgs(void *param) {
+void *decryption_jpgs(void *key) {
   for (int i = 0; i < jpgFileCount; i++) {
     // open a single jpg file
     unsigned char *fileDir =
@@ -487,7 +487,7 @@ void *decryption_jpgs(void *param) {
     int maskSize = fread(mask, 1, FILE_HANDLE_BLOCK_SIZE, mask_fp);
     int maskTextStringSize = strlen(mask);
 
-    mask = aes_128_decryption(mask);
+    mask = aes_128_decryption(mask, key);
 
     // do XOR calculation on plainText with randomly generated mask
     unsigned char plainText[FILE_HANDLE_BLOCK_SIZE] = {

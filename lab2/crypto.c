@@ -7,11 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-unsigned char *aes_128_encryption(unsigned char *plainText) {
+unsigned char *aes_128_encryption(unsigned char *plainText,
+                                  unsigned char *userKey) {
   AES_KEY key;
   unsigned char initKey[BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
                                        0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
                                        0x0c, 0x0d, 0x0e, 0x0f};
+  for (int i = 0; i < BLOCK_SIZE; i++) {
+    initKey[i] = userKey[i];
+  }
 
   unsigned char *cipherText =
       (unsigned char *)malloc(sizeof(unsigned char) * BLOCK_SIZE);
@@ -21,6 +25,7 @@ unsigned char *aes_128_encryption(unsigned char *plainText) {
   if (AES_set_encrypt_key(initKey, sizeof(initKey) * 8, &key) < 0) {
     return NULL;
   };
+
   // AES 암호화 : 평문, 암호문, 비밀키
   AES_encrypt(plainText, cipherText, &key);
 
@@ -29,11 +34,15 @@ unsigned char *aes_128_encryption(unsigned char *plainText) {
   return cipherText;
 }
 
-unsigned char *aes_128_decryption(unsigned char *cipherText) {
+unsigned char *aes_128_decryption(unsigned char *cipherText,
+                                  unsigned char *userKey) {
   AES_KEY key;
   unsigned char initKey[BLOCK_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
                                        0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
                                        0x0c, 0x0d, 0x0e, 0x0f};
+  for (int i = 0; i < BLOCK_SIZE; i++) {
+    initKey[i] = userKey[i];
+  }
 
   unsigned char *plainText =
       (unsigned char *)malloc(sizeof(unsigned char) * BLOCK_SIZE);
