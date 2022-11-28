@@ -4,6 +4,8 @@
         "stdio.h": "c",
         "input_validate.h": "c",
         "__threading_support": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "pthread.h": "c",
+        "semaphore.h": "c"
     }
 }
