@@ -32,12 +32,12 @@ int main(void) {
   pool_init();
 
   // submit the work to the queue
-  pool_submit(&add, &work1);
-  pool_submit(&add, &work2);
-  pool_submit(&add, &work3);
+  pool_submit(add, &work1);
+  pool_submit(add, &work2);
+  pool_submit(add, &work3);
 
   // 4. thread pool에 추가한 work submit하기
-  pool_submit(&add, &work4);
+  pool_submit(add, &work4);
 
   sleep(5);
   pool_shutdown();

@@ -25,7 +25,7 @@ int count;  // number of elements in the queue
 
 // the worker bees
 pthread_t tid[NUMBER_OF_THREADS];
-sem_t sem;
+sem_t *sem;
 pthread_mutex_t mutex;
 
 task dequeue() {
@@ -41,14 +41,16 @@ task dequeue() {
 
 void *worker(void *param) {
   while (TRUE) {
-    printf("%lu awaiting a task ....\n", pthread_self());
+    printf("%d awaiting a task ....\n", pthread_self());
     // 1. 세마포 sem에 대한 P연산 코드 삽입
-    sem_wait(&sem);
+    sem_wait(sem);
 
-    printf("%lu got a task to do\n", pthread_self());
+    printf("%d got a task to do\n", pthread_self());
     // 2. work queue로부터 작업 하나 가져오는 dequeue 정의
+    printf("[debug] before dequeue\n");
     task work = dequeue();
     execute(work.function, work.data);
+    printf("[debug] after dequeue\n");
     usleep(10000);
     pthread_testcancel();
   }
@@ -96,7 +98,7 @@ int pool_submit(void (*somefunction)(void *p), void *p) {
   // and return QUEUE_SUCCESS
   // 실패하면 return QUEUE_REJECTED
   if (enqueue(t)) {
-    sem_post(&sem);
+    sem_post(sem);
     return QUEUE_SUCCESS;
   } else {
     return QUEUE_REJECTED;
@@ -104,12 +106,12 @@ int pool_submit(void (*somefunction)(void *p), void *p) {
 }
 
 void pool_init(void) {
-  // 1. mutext 초기화
+  // 1. mutex 초기화
   // 2. 세마포 sem 초기화 (count = 0)
   // 3. NUMBER_OF_THREADS 만큼 스레드 생성
   // 4. start routine : worker
   pthread_mutex_init(&mutex, NULL);
-  sem_init(&sem, 0, 0);
+  sem = sem_open("lab_sem", O_CREAT);
   for (int i = 0; i < NUMBER_OF_THREADS; i++) {
     pthread_create(&tid[i], NULL, worker, NULL);
   }
