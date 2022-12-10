@@ -54,7 +54,7 @@ void *worker(void *param) {
       processed_jpg_count++;
     }
 
-    sleep(1);
+    usleep(10000);
 
     pthread_testcancel();
   }
@@ -115,7 +115,7 @@ void pool_init(void) {
   // 3. NUMBER_OF_THREADS 만큼 스레드 생성
   // 4. start routine : worker
   pthread_mutex_init(&mutex, NULL);
-  sem = sem_open("lab_sem", O_CREAT);
+  sem = sem_open("lab_sem", O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO, 0);
   for (int i = 0; i < NUMBER_OF_THREADS; i++) {
     pthread_create(&tid[i], NULL, worker, NULL);
   }
@@ -130,11 +130,11 @@ void pool_shutdown(void) {
     pthread_cancel(tid[i]);
   }
 
-  // if (actionFlag == ATTACK) {
-  //   printf("[attack] %d pdf files were encrypted\n", processed_pdf_count);
-  //   printf("[attack] %d jpg files were encrypted\n", processed_jpg_count);
-  // } else if (actionFlag == RESTORE) {
-  //   printf("[restore] %d pdf files were decrypted\n", processed_pdf_count);
-  //   printf("[restore] %d jpg files were decrypted\n", processed_jpg_count);
-  // }
+  if (actionFlag == ATTACK) {
+    printf("[attack] %d pdf files were encrypted\n", processed_pdf_count);
+    printf("[attack] %d jpg files were encrypted\n", processed_jpg_count);
+  } else if (actionFlag == RESTORE) {
+    printf("[restore] %d pdf files were decrypted\n", processed_pdf_count);
+    printf("[restore] %d jpg files were decrypted\n", processed_jpg_count);
+  }
 }
