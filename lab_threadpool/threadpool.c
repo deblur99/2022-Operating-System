@@ -47,10 +47,8 @@ void *worker(void *param) {
 
     printf("%d got a task to do\n", pthread_self());
     // 2. work queue로부터 작업 하나 가져오는 dequeue 정의
-    printf("[debug] before dequeue\n");
     task work = dequeue();
     execute(work.function, work.data);
-    printf("[debug] after dequeue\n");
     usleep(10000);
     pthread_testcancel();
   }

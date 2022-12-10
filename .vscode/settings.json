@@ -6,6 +6,7 @@
         "__threading_support": "c",
         "stdlib.h": "c",
         "pthread.h": "c",
-        "semaphore.h": "c"
+        "semaphore.h": "c",
+        "utils.h": "c"
     }
 }
