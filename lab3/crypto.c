@@ -4,9 +4,6 @@
 
 #include "crypto.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 unsigned char *aes_128_encryption(unsigned char *plainText,
                                   unsigned char *userKey) {
   AES_KEY key;

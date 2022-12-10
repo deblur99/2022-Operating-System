@@ -1,6 +1,6 @@
 CC = gcc
 TARGET = dkuware
-OBJS = dkuware.o crypto.o utils.o
+OBJS = dkuware.o crypto.o utils.o threadpool.o
 CFLAGS = -Wall -g
 LDFLAGS = -lc -lpthread -lssl -lcrypto
 

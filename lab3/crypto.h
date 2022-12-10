@@ -7,6 +7,8 @@
 
 #include <openssl/aes.h>
 
+#include "defines.h"
+
 #define BLOCK_SIZE 16
 
 unsigned char *aes_128_encryption(unsigned char *plainText,
